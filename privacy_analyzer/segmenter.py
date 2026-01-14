@@ -62,3 +62,59 @@ def segment_document(text: str, *, max_caluse_chars: int = 1200) -> List[Clause]
 
             if start < end:
                 raw_spans.append((start, end))
+
+    # Merge tiny spans and split huge spans
+    merged: List[Tuple[int, int]] = []
+
+    for start, end in raw_spans:
+        if merged and (end - merged[-1][0] <= max_caluse_chars):
+            # Close gap merge
+            merged[-1] = (merged[-1][0], end)
+        else:
+            merged.append((start, end))
+
+    clauses: List[Clause] = []
+    for i, (start, end) in raw_spans:
+        if merged and (end - merged[-1][0]) < max_clause_chars and (start - merged[-1][1]) < 40:
+            # Close gap merge
+            merged[-1] = (merged[-1][0], end)
+        else:
+            merged.append((start, end))
+
+    clauses: List[Clause] = []
+    for i, (start, end) in enumerate(merged):
+        chunk = text[start:end].strip()
+        if not chunk:
+            continue
+        # If too large, split by sentence-ish boundaries deterministically
+    if len(chunk) > max_clause_chars:
+        subs = _split_large(text, start, end, max_clause_chars)
+        for j, (s, e) in enumerate(subs):
+            clauses.append(Clause(
+                id=_stable_id(f"clause{i}", s, e),
+                span=Span(s, e),
+                text=text[s:e].strip()))
+    else:
+        clauses.append(Clause(
+            id=_stable_id(f"clause{i}.{j}", start, end),
+            span=Span(start, end),
+            text=chunk))
+        
+    return clauses
+
+def _split_large(text: str, start: int, end: int, max_clause_chars: int) -> List[Tuple[int, int]]:
+    chunk = text[start:end]
+
+    # setnence-ish boundaries: ". "; " or "\n"
+    boundaries = [m.end() for m in re.finditer(r"(?<:\.\s+;\s+|\n)", chunk)]
+    boundaries = [0] + boundaries + [len(chunk)]
+    spans = []
+    cur = 0
+    while cur < len(chunk):
+        # Choose farthest boundary <= cur+max_chars
+        limit = min(len(chunk), cur + max_chars)
+        candidates = [b for b in boundaries if cur < b <= limit]
+        nxt = max(candidates) if candidates else limit
+        spans.append((start + cur, start + nxt))
+        cur = nxt
+    return spans
