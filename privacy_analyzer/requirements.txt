@@ -1,0 +1,15 @@
+# No external dependencies required for core functionality
+# The analyzer uses only Python standard library modules:
+# - re (regular expressions)
+# - dataclasses
+# - typing
+# - json
+# - argparse
+# - pathlib
+# - sys
+
+# Optional dependencies for development/testing:
+# pytest>=7.0.0  # For unit testing
+# black>=22.0.0  # For code formatting
+# mypy>=0.990    # For type checking
+# flake8>=5.0.0  # For linting
