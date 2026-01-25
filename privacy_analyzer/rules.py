@@ -1,6 +1,7 @@
 from __future__ import annotations
 from dataclasses import dataclass
-from typing import List, Optional, Dict, Tuple
+from typing import List
+import re
 
 
 @dataclass(frozen=True)
@@ -12,6 +13,8 @@ class RuleMatch:
     evidence_end: int
     evidence_text: str
     rationale: str
+    confidence: float
+
 
 @dataclass(frozen=True)
 class Rule:
@@ -24,27 +27,27 @@ class Rule:
     def apply(self, clause_text: str, clause_offset: int) -> List[RuleMatch]:
         matches: List[RuleMatch] = []
         for m in self.pattern.finditer(clause_text):
-            s = caluse_offset + m.start()
+            s = clause_offset + m.start()
             e = clause_offset + m.end()
             matches.append(
                 RuleMatch(
                     rule_id=self.rule_id,
                     category=self.category,
-                    confidence=self.confidence,
+                    description=self.rationale,
                     evidence_start=s,
                     evidence_end=e,
                     evidence_text=m.group(0),
-                    rationale=self.rationale
+                    rationale=self.rationale,
+                    confidence=self.confidence
                 )
             )
-            
-            
-            return matches
+        return matches
+
         
 def default_rules() -> List[Rule]:
     """
-    Starter categories algined with your "user-impact" framing.
-    Keep partterns conservative to reduce false positives.
+    Starter categories aligned with your "user-impact" framing.
+    Keep patterns conservative to reduce false positives.
     """
     def R(rule_id: str, category: str, conf: float, pat: str, rationale: str) -> Rule:
         return Rule(rule_id, category, conf, re.compile(pat, re.IGNORECASE), rationale)
